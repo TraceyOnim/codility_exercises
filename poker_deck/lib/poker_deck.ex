@@ -6,8 +6,9 @@ defmodule PokerDeck do
 
   @card_values ~w(2 3 4 5 6 7 8 9 T J Q K A) |> Enum.with_index(1)
 
-  def new(black_cards, white_cards) do
-    %__MODULE__{black: black_cards, white: white_cards}
+  def new(%{} = cards) do
+    %__MODULE__{}
+    |> Map.merge(cards)
   end
 
   def categorize_player_cards(%{black: black_cards, white: white_cards}) do
@@ -17,24 +18,57 @@ defmodule PokerDeck do
     }
   end
 
-  def _category({cards_values, cards_suits} = cards) do
-    if has_same_suits?(cards_suits) do
-      _flush_or_straight_flush(cards_values)
-    else
-      cards
-    end
-  end
-
-  def _category(cards) do
+  def _category([_h | _t] = cards) do
     cards
     |> _card_values_and_suits()
     |> _category()
   end
 
+  def _category({cards_values, cards_suits}) do
+    if has_same_suits?(cards_suits) do
+      _flush_or_straight_flush(cards_values)
+    else
+      _category_name(cards_values)
+    end
+  end
+
+  def _category_name([_h | _t] = card_values) do
+    {values, frequencies} =
+      card_values
+      |> Enum.frequencies()
+      |> Enum.unzip()
+
+    frequencies = Enum.sort(frequencies, :desc)
+    _category_name({values, frequencies})
+  end
+
+  def _category_name({_values, [2 | _] = frequencies}) do
+    case Enum.count(frequencies, fn frequency -> frequency == 2 end) do
+      2 -> :two_pair
+      _ -> :pair
+    end
+  end
+
+  def _category_name({_values, [3, 2]}) do
+    :full_house
+  end
+
+  def _category_name({_values, [3 | _]}) do
+    :three_of_a_kind
+  end
+
+  def _category_name({_values, [4, 1]}) do
+    :four_of_a_kind
+  end
+
+  def _category_name(_) do
+    :high_card
+  end
+
   def _flush_or_straight_flush(card_values) do
     case has_consecutive_values?(card_values) do
-      true -> "straight flush"
-      _ -> "flush"
+      true -> :straight_flush
+      _ -> :flush
     end
   end
 
@@ -57,5 +91,3 @@ defmodule PokerDeck do
     end)
   end
 end
-
-# https://stackoverflow.com/questions/66682671/how-to-check-if-an-array-is-in-sequential-and-consecutive-order-in-elixir
