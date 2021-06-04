@@ -18,6 +18,14 @@ defmodule PokerDeck do
     }
   end
 
+  # converter
+  # wip in progress
+  def results(cards) do
+    cards
+    |> new()
+    |> categorize_player_cards()
+  end
+
   def _category([_h | _t] = cards) do
     cards
     |> _card_values_and_suits()
