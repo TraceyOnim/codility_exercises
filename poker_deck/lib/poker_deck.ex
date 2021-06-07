@@ -13,17 +13,20 @@ defmodule PokerDeck do
 
   def categorize_player_cards(%{black: black_cards, white: white_cards}) do
     %__MODULE__{
-      black: {black_cards, _category(black_cards)},
-      white: {white_cards, _category(white_cards)}
+      black: {black_cards, _category(black_cards), :black},
+      white: {white_cards, _category(white_cards), :white}
     }
   end
 
   # converter
   # wip in progress
-  def results(cards) do
+  def display_results(cards) do
     cards
     |> new()
     |> categorize_player_cards()
+    |> rank_cards()
+    |> higher_rank()
+    |> results()
   end
 
   def _category([_h | _t] = cards) do
@@ -98,4 +101,44 @@ defmodule PokerDeck do
       {[value | values], [suit | suits]}
     end)
   end
+
+  def rank_cards(%{black: black_cards, white: white_cards}) do
+    %__MODULE__{
+      black: black_cards |> Tuple.append(rank_cards(black_cards)),
+      white: white_cards |> Tuple.append(rank_cards(white_cards))
+    }
+  end
+
+  def rank_cards({cards, :high_card, _player}) do
+    {card_values, _suits} = PokerDeck._card_values_and_suits(cards)
+
+    @card_values
+    |> Enum.filter(fn {value, _index} -> value in card_values end)
+    |> Enum.max_by(fn {_value, index} -> index end)
+  end
+
+  def rank_cards({cards, _category, _player}) do
+    cards
+  end
+
+  def higher_rank(%{black: black_cards, white: white_cards}) do
+    {_cards, _category, _player_b, {_, index_b}} = black_cards
+
+    {_cards, _category, _player_w, {_, index_w}} = white_cards
+
+    Enum.find([black_cards, white_cards], fn {_cards, _category, _player, {_value, index}} ->
+      index == max(index_b, index_w)
+    end)
+  end
+
+  def results({_cards, category, player, {value, _}}) do
+    "#{player} wins-#{to_string(category)}: #{card_name(value)}"
+  end
+
+  def card_name("A"), do: "Ace"
+  def card_name("K"), do: "King"
+  def card_name("Q"), do: "Queen"
+  def card_name("J"), do: "Jack"
+  def card_name("T"), do: "10"
+  def card_name(value), do: value
 end
